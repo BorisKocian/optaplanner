@@ -16,7 +16,7 @@ import org.optaplanner.examples.common.app.CommonApp;
 import org.optaplanner.examples.vehiclerouting.domain.VehicleRoutingSolution;
 import org.optaplanner.examples.vehiclerouting.persistence.VehicleRoutingImporter;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 /**
  * The idea is to verify one of the basic requirements of Multithreaded Solving - the reproducibility of results. After
@@ -48,9 +48,7 @@ public class VehicleRoutingMultiThreadedReproducibilityTest extends AbstractTurt
             vehicleRoutingSolutions[i] = solution;
         }
 
-        solverFactory = SolverFactory.createFromXmlResource(vehicleRoutingApp.getSolverConfig());
-        SolverConfig solverConfig = solverFactory.getSolverConfig();
-
+        SolverConfig solverConfig = SolverConfig.createFromXmlResource(vehicleRoutingApp.getSolverConfigResource());
         solverConfig.withEnvironmentMode(EnvironmentMode.REPRODUCIBLE)
                 .withMoveThreadCount(MOVE_THREAD_COUNT);
         solverConfig.getPhaseConfigList().forEach(phaseConfig -> {
@@ -58,6 +56,7 @@ public class VehicleRoutingMultiThreadedReproducibilityTest extends AbstractTurt
                 phaseConfig.setTerminationConfig(new TerminationConfig().withStepCountLimit(STEP_LIMIT));
             }
         });
+        solverFactory = SolverFactory.create(solverConfig);
     }
 
     @Test

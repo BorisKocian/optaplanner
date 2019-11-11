@@ -45,7 +45,7 @@ import org.optaplanner.core.impl.localsearch.decider.LocalSearchDecider;
 import org.optaplanner.core.impl.localsearch.decider.MultiThreadedLocalSearchDecider;
 import org.optaplanner.core.impl.localsearch.decider.acceptor.Acceptor;
 import org.optaplanner.core.impl.localsearch.decider.forager.LocalSearchForager;
-import org.optaplanner.core.impl.solver.ChildThreadType;
+import org.optaplanner.core.impl.solver.thread.ChildThreadType;
 import org.optaplanner.core.impl.solver.recaller.BestSolutionRecaller;
 import org.optaplanner.core.impl.solver.termination.Termination;
 
@@ -225,6 +225,9 @@ public class LocalSearchPhaseConfig extends PhaseConfig<LocalSearchPhaseConfig> 
                 case LATE_ACCEPTANCE:
                     acceptorConfig_.setAcceptorTypeList(Collections.singletonList(AcceptorType.LATE_ACCEPTANCE));
                     break;
+                case GREAT_DELUGE:
+                    acceptorConfig_.setAcceptorTypeList(Collections.singletonList(AcceptorType.GREAT_DELUGE));
+                    break;
                 default:
                     throw new IllegalStateException("The localSearchType (" + localSearchType_
                             + ") is not implemented.");
@@ -255,6 +258,7 @@ public class LocalSearchPhaseConfig extends PhaseConfig<LocalSearchPhaseConfig> 
                     break;
                 case SIMULATED_ANNEALING:
                 case LATE_ACCEPTANCE:
+                case GREAT_DELUGE:
                     // Fast stepping algorithm
                     foragerConfig_.setAcceptedCountLimit(1);
                     break;

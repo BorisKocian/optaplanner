@@ -17,6 +17,7 @@
 package org.optaplanner.core.api.score.constraint;
 
 import java.io.Serializable;
+import java.util.Comparator;
 import java.util.List;
 
 import org.optaplanner.core.api.score.Score;
@@ -81,8 +82,18 @@ public final class ConstraintMatch implements Serializable, Comparable<Constrain
         } else if (!constraintName.equals(other.constraintName)) {
             return constraintName.compareTo(other.constraintName);
         } else {
+            /*
+             * TODO Come up with a better cache.
+             *
+             * We reuse the comparator from here, since it internally caches some reflection that we don't want to be performing
+             * over and over again. However, there are possibly thousands of instances of this class, and each will get its own
+             * comparator. Therefore, the caching is only partially effective.
+             */
+            Comparator<Object> comparator = new ConstraintJustificationComparator();
             for (int i = 0; i < justificationList.size() && i < other.justificationList.size(); i++) {
-                int comparison = ((Comparable) justificationList.get(i)).compareTo(other.justificationList.get(i));
+                Object left = justificationList.get(i);
+                Object right = other.justificationList.get(i);
+                int comparison = comparator.compare(left, right);
                 if (comparison != 0) {
                     return comparison;
                 }

@@ -38,8 +38,9 @@ Configure the `SolverFactory` with a solver configuration XML file, provided as 
        Solver<NQueens> solver = solverFactory.buildSolver();
 ----
 
-In a typical project (following the Maven directory structure), that solverConfig XML file would be located at ``$PROJECT_DIR/src/main/resources/org/optaplanner/examples/nqueens/solver/nqueensSolverConfig.xml``.
-Alternatively, a `SolverFactory` can be created from a ``File``, an `InputStream` or a `Reader` with methods such as ``SolverFactory.createFromXmlFile()``.
+In a typical project (following the Maven directory structure),
+that solverConfig XML file would be located at ``$PROJECT_DIR/src/main/resources/org/optaplanner/examples/nqueens/solver/nqueensSolverConfig.xml``.
+Alternatively, a `SolverFactory` can be created from a ``File`` with ``SolverFactory.createFromXmlFile()``.
 However, for portability reasons, a classpath resource is recommended.
 
 [NOTE]
@@ -116,17 +117,16 @@ These various parts of a configuration are explained further in this manual.
 
 A solver configuration can also be configured with the `SolverConfig` API.
 This is especially useful to change some values dynamically at runtime.
-For example, to change the running time based on user input, before building the ``Solver``:
+For example, to change the running time based on system property, before building the ``Solver``:
 
 [source,java,options="nowrap"]
 ----
-        SolverFactory<NQueens> solverFactory = SolverFactory.createFromXmlResource(
+        SolverConfig solverConfig = SolverConfig.createFromXmlResource(
                 "org/optaplanner/examples/nqueens/solver/nqueensSolverConfig.xml");
-
-        solverFactory.getSolverConfig()
-                .withTerminationConfig(new TerminationConfig()
+        solverConfig.withTerminationConfig(new TerminationConfig()
                         .withMinutesSpentLimit(userInput));
 
+        SolverFactory<NQueens> solverFactory = SolverFactory.create(solverConfig);
         Solver<NQueens> solver = solverFactory.buildSolver();
 ----
 
@@ -136,27 +136,27 @@ These `$$*$$Config` classes are the Java representation of the XML format.
 They build the runtime components (of the package namespace ``org.optaplanner.core.impl``)
 and assemble them into an efficient ``Solver``.
 
-[IMPORTANT]
+[NOTE]
 ====
-The `SolverFactory` is only thread-safe after it's configured.
-So the `getSolverConfig()` method is not thread-safe.
-To configure a `SolverFactory` dynamically for each user request, build a basic `SolverFactory` during initialization
-and clone it with the `cloneSolverFactory()` method for a user request:
+To configure a `SolverFactory` dynamically for each user request,
+build a template `SolverConfig` during initialization
+and copy it with the copy constructor for each user request:
 
 [source,java,options="nowrap"]
 ----
-    private SolverFactory<NQueens> base;
+    private SolverConfig template;
 
     public void init() {
-        base = SolverFactory.createFromXmlResource(
+        template = SolverConfig.createFromXmlResource(
                 "org/optaplanner/examples/nqueens/solver/nqueensSolverConfig.xml");
-        base.getSolverConfig().setTerminationConfig(new TerminationConfig());
+        template.setTerminationConfig(new TerminationConfig());
     }
 
     // Called concurrently from different threads
-    public void userRequest(..., long userInput)
-        SolverFactory<NQueens> solverFactory = base.cloneSolverFactory();
-        solverFactory.getSolverConfig().getTerminationConfig().setMinutesSpentLimit(userInput);
+    public void userRequest(..., long userInput) {
+        SolverConfig solverConfig = new SolverConfig(template); // Copy it
+        solverConfig.getTerminationConfig().setMinutesSpentLimit(userInput);
+        SolverFactory<NQueens> solverFactory = SolverFactory.create(solverConfig);
         Solver<NQueens> solver = solverFactory.buildSolver();
         ...
     }
@@ -257,7 +257,7 @@ and you want to increase the cache size in one benchmark:
   </scoreDirectorFactory>
 ----
 
-Add a public setter for each custom property, which is called when a `Solver` is build.
+Add a public setter for each custom property, which is called when a `Solver` is built.
 
 [source,java,options="nowrap"]
 ----
@@ -592,6 +592,11 @@ There is no need to add `null` in a collection used by a ``ValueRangeProvider``.
 Using a nullable planning variable implies that your score calculation is responsible for punishing (or even rewarding) variables with a null value.
 ====
 
+[WARNING]
+====
+Currently <<chainedPlanningVariable, chained>> planning variables are not compatible with `nullable`.
+====
+
 <<repeatedPlanning,Repeated planning>> (especially <<realTimePlanning,real-time planning>>) does not mix well with a nullable planning variable.
 Every time the Solver starts or a problem fact change is made,
 the <<constructionHeuristics,Construction Heuristics>> will try to initialize all the `null` variables again, which can be a huge waste of time.
@@ -915,7 +920,7 @@ image::PlannerConfiguration/chainPrinciples.png[align="center"]
 *Every initialized planning entity is part of an open-ended chain that begins from an anchor.* A valid model means that:
 
 * A chain is never a loop. The tail is always open.
-* Every chain always has exactly one anchor. The anchor is a problem fact, never a planning entity.
+* Every chain always has exactly one anchor. The anchor is never an instance of the planning entity class that contains the chained planning variable.
 * A chain is never a tree, it is always a line. Every anchor or planning entity has at most one trailing planning entity.
 * Every initialized planning entity is part of a chain.
 * An anchor with no planning entities pointing to it, is also considered a chain.

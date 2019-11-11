@@ -17,6 +17,7 @@
 package org.optaplanner.core.api.score.holder;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,11 +27,14 @@ import java.util.stream.Collectors;
 
 import org.drools.core.common.AgendaItem;
 import org.kie.api.definition.rule.Rule;
+import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.rule.RuleContext;
 import org.optaplanner.core.api.score.Score;
 import org.optaplanner.core.api.score.constraint.ConstraintMatch;
 import org.optaplanner.core.api.score.constraint.ConstraintMatchTotal;
 import org.optaplanner.core.api.score.constraint.Indictment;
+import org.optaplanner.core.impl.score.director.drools.DroolsScoreDirector;
+import org.optaplanner.core.impl.score.director.drools.OptaPlannerRuleEventListener;
 
 /**
  * Abstract superclass for {@link ScoreHolder}.
@@ -68,6 +72,15 @@ public abstract class AbstractScoreHolder<Score_ extends Score<Score_>>
     }
 
     @Override
+    public Map<String, ConstraintMatchTotal> getConstraintMatchTotalMap() {
+        if (!isConstraintMatchEnabled()) {
+            throw new IllegalStateException("When constraintMatchEnabled (" + isConstraintMatchEnabled()
+                    + ") is disabled in the constructor, this method should not be called.");
+        }
+        return constraintMatchTotalMap;
+    }
+
+    @Override
     public Map<Object, Indictment> getIndictmentMap() {
         if (!isConstraintMatchEnabled()) {
             throw new IllegalStateException("When constraintMatchEnabled (" + isConstraintMatchEnabled()
@@ -88,12 +101,20 @@ public abstract class AbstractScoreHolder<Score_ extends Score<Score_>>
         if (constraintMatchEnabled) {
             String constraintPackage = rule.getPackageName();
             String constraintName = rule.getName();
-            String constraintId = constraintPackage + "/" + constraintName;
+            String constraintId = ConstraintMatchTotal.composeConstraintId(constraintPackage, constraintName);
             constraintMatchTotalMap.put(constraintId,
                     new ConstraintMatchTotal(constraintPackage, constraintName, constraintWeight, zeroScore));
         }
     }
 
+    /**
+     * Requires @{@link OptaPlannerRuleEventListener} to be added as event listener on {@link KieSession}, otherwise the
+     * score changes caused by the constraint matches would not be undone. See
+     * {@link DroolsScoreDirector#resetKieSession()} for an example.
+     * @param kcontext The rule for which to register the match.
+     * @param constraintUndoListener The operation to run to undo the match.
+     * @param scoreSupplier The score change to be undone when constraint justification enabled.
+     */
     protected void registerConstraintMatch(RuleContext kcontext,
             final Runnable constraintUndoListener, Supplier<Score_> scoreSupplier) {
         AgendaItem<?> agendaItem = (AgendaItem) kcontext.getMatch();
@@ -123,9 +144,52 @@ public abstract class AbstractScoreHolder<Score_ extends Score<Score_>>
         Rule rule = kcontext.getRule();
         String constraintPackage = rule.getPackageName();
         String constraintName = rule.getName();
-        String constraintId = constraintPackage + "/" + constraintName;
+        String constraintId = ConstraintMatchTotal.composeConstraintId(constraintPackage, constraintName);
         return constraintMatchTotalMap.computeIfAbsent(constraintId,
                 k -> new ConstraintMatchTotal(constraintPackage, constraintName, null, zeroScore));
+    }
+
+    /**
+     * For internal use only, use penalize() or reward() instead.
+     * @param kcontext never null
+     */
+    public void impactScore(RuleContext kcontext) {
+        throw new UnsupportedOperationException("In the rule (" + kcontext.getRule().getName()
+                + "), the scoreHolder class (" + getClass()
+                + ") requires a weightMultiplier.");
+    }
+
+    /**
+     * For internal use only, use penalize() or reward() instead.
+     * @param kcontext never null
+     * @param weightMultiplier any
+     */
+    public void impactScore(RuleContext kcontext, int weightMultiplier) {
+        throw new UnsupportedOperationException("In the rule (" + kcontext.getRule().getName()
+                + "), the scoreHolder class (" + getClass()
+                + ") does not support an int weightMultiplier (" + weightMultiplier + ").");
+    }
+
+    /**
+     * For internal use only, use penalize() or reward() instead.
+     * @param kcontext never null
+     * @param weightMultiplier any
+     */
+    public void impactScore(RuleContext kcontext, long weightMultiplier) {
+        throw new UnsupportedOperationException("In the rule (" + kcontext.getRule().getName()
+                + "), the scoreHolder class (" + getClass()
+                + ") does not support an int weightMultiplier (" + weightMultiplier + ").");
+    }
+
+    /**
+     * For internal use only, use penalize() or reward() instead.
+     * @param kcontext never null
+     * @param weightMultiplier any
+     */
+    public void impactScore(RuleContext kcontext, BigDecimal weightMultiplier) {
+        throw new UnsupportedOperationException("In the rule (" + kcontext.getRule().getName()
+                + "), the scoreHolder class (" + getClass()
+                + ") does not support an int weightMultiplier (" + weightMultiplier + ").");
     }
 
     protected List<Object> extractJustificationList(RuleContext kcontext) {
@@ -159,7 +223,5 @@ public abstract class AbstractScoreHolder<Score_ extends Score<Score_>>
                 }
             }
         }
-
     }
-
 }

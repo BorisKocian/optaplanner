@@ -95,6 +95,7 @@ import org.optaplanner.core.impl.score.buildin.simple.SimpleScoreDefinition;
 import org.optaplanner.core.impl.score.buildin.simplebigdecimal.SimpleBigDecimalScoreDefinition;
 import org.optaplanner.core.impl.score.buildin.simpledouble.SimpleDoubleScoreDefinition;
 import org.optaplanner.core.impl.score.buildin.simplelong.SimpleLongScoreDefinition;
+import org.optaplanner.core.impl.score.definition.AbstractBendableScoreDefinition;
 import org.optaplanner.core.impl.score.definition.ScoreDefinition;
 import org.optaplanner.core.impl.score.director.ScoreDirector;
 import org.slf4j.Logger;
@@ -839,6 +840,9 @@ public class SolutionDescriptor<Solution_> {
         return constraintConfigurationMemberAccessor;
     }
 
+    /**
+     * @return sometimes null
+     */
     public ConstraintConfigurationDescriptor<Solution_> getConstraintConfigurationDescriptor() {
         return constraintConfigurationDescriptor;
     }
@@ -933,6 +937,68 @@ public class SolutionDescriptor<Solution_> {
 
     public LookUpStrategyResolver getLookUpStrategyResolver() {
         return lookUpStrategyResolver;
+    }
+
+    public void validateConstraintWeight(String constraintPackage, String constraintName, Score<?> constraintWeight) {
+        if (constraintWeight == null) {
+            throw new IllegalArgumentException("The constraintWeight (" + constraintWeight
+                    + ") for constraintPackage (" + constraintPackage
+                    + ") and constraintName (" + constraintName
+                    + ") must not be null.\n"
+                    + (constraintConfigurationDescriptor == null ? "Maybe check your constraint implementation."
+                    : "Maybe validate the data input of your constraintConfigurationClass ("
+                    + constraintConfigurationDescriptor.getConstraintConfigurationClass()
+                    + ") for that constraint (" + constraintName + ")."));
+        }
+        if (!scoreDefinition.getScoreClass().isAssignableFrom(constraintWeight.getClass())) {
+            throw new IllegalArgumentException("The constraintWeight (" + constraintWeight
+                    + ") of class (" + constraintWeight.getClass()
+                    + ") for constraintPackage (" + constraintPackage + ") and constraintName (" + constraintName
+                    + ") must be of the scoreClass (" + scoreDefinition.getScoreClass() + ").\n"
+                    + (constraintConfigurationDescriptor == null ? "Maybe check your constraint implementation."
+                    : "Maybe validate the data input of your constraintConfigurationClass ("
+                    + constraintConfigurationDescriptor.getConstraintConfigurationClass()
+                    + ") for that constraint (" + constraintName + ")."));
+        }
+        if (constraintWeight.getInitScore() != 0) {
+            throw new IllegalArgumentException("The constraintWeight (" + constraintWeight
+                    + ") for constraintPackage (" + constraintPackage
+                    + ") and constraintName (" + constraintName
+                    + ") must have an initScore (" + constraintWeight.getInitScore() + ") equal to 0.\n"
+                    + (constraintConfigurationDescriptor == null ? "Maybe check your constraint implementation."
+                    : "Maybe validate the data input of your constraintConfigurationClass ("
+                    + constraintConfigurationDescriptor.getConstraintConfigurationClass()
+                    + ") for that constraint (" + constraintName + ")."));
+        }
+        if (!scoreDefinition.isPositiveOrZero(constraintWeight)) {
+            throw new IllegalArgumentException("The constraintWeight (" + constraintWeight
+                    + ") for constraintPackage (" + constraintPackage
+                    + ") and constraintName (" + constraintName
+                    + ") must have a positive or zero constraintWeight (" + constraintWeight + ").\n"
+                    + (constraintConfigurationDescriptor == null ? "Maybe check your constraint implementation."
+                    : "Maybe validate the data input of your constraintConfigurationClass ("
+                    + constraintConfigurationDescriptor.getConstraintConfigurationClass()
+                    + ") for that constraint (" + constraintName + ")."));
+        }
+        if (constraintWeight instanceof AbstractBendableScore) {
+            AbstractBendableScore bendableConstraintWeight = (AbstractBendableScore) constraintWeight;
+            AbstractBendableScoreDefinition bendableScoreDefinition = (AbstractBendableScoreDefinition) scoreDefinition;
+            if (bendableConstraintWeight.getHardLevelsSize() != bendableScoreDefinition.getHardLevelsSize()
+                    || bendableConstraintWeight.getSoftLevelsSize() != bendableScoreDefinition.getSoftLevelsSize()) {
+                throw new IllegalArgumentException("The bendable constraintWeight (" + constraintWeight
+                        + ") for constraintPackage (" + constraintPackage
+                        + ") and constraintName (" + constraintName
+                        + ") has a hardLevelsSize (" + bendableConstraintWeight.getHardLevelsSize()
+                        + ") or a softLevelsSize (" + bendableConstraintWeight.getSoftLevelsSize()
+                        + ") that doesn't match the score definition's hardLevelsSize ("
+                        + bendableScoreDefinition.getHardLevelsSize()
+                        + ") or softLevelsSize (" + bendableScoreDefinition.getSoftLevelsSize() + ").\n"
+                        + (constraintConfigurationDescriptor == null ? "Maybe check your constraint implementation."
+                        : "Maybe validate the data input of your constraintConfigurationClass ("
+                        + constraintConfigurationDescriptor.getConstraintConfigurationClass()
+                        + ") for that constraint (" + constraintName + ")."));
+            }
+        }
     }
 
     // ************************************************************************

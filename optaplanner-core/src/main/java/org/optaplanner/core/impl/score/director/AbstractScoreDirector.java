@@ -49,7 +49,7 @@ import org.optaplanner.core.impl.domain.variable.listener.support.VariableListen
 import org.optaplanner.core.impl.domain.variable.supply.SupplyManager;
 import org.optaplanner.core.impl.heuristic.move.Move;
 import org.optaplanner.core.impl.score.definition.ScoreDefinition;
-import org.optaplanner.core.impl.solver.ChildThreadType;
+import org.optaplanner.core.impl.solver.thread.ChildThreadType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -474,7 +474,7 @@ public abstract class AbstractScoreDirector<Solution_, Factory_ extends Abstract
         if (lookUpEnabled) {
             lookUpManager.addWorkingObject(problemFact);
         }
-        variableListenerSupport.resetWorkingSolution(); // TODO do not nuke it
+        variableListenerSupport.resetWorkingSolution(); // TODO do not nuke the variable listeners
     }
 
     @Override
@@ -484,7 +484,7 @@ public abstract class AbstractScoreDirector<Solution_, Factory_ extends Abstract
 
     @Override
     public void afterProblemPropertyChanged(Object problemFactOrEntity) {
-        variableListenerSupport.resetWorkingSolution(); // TODO do not nuke it
+        variableListenerSupport.resetWorkingSolution(); // TODO do not nuke the variable listeners
     }
 
     @Override
@@ -497,7 +497,7 @@ public abstract class AbstractScoreDirector<Solution_, Factory_ extends Abstract
         if (lookUpEnabled) {
             lookUpManager.removeWorkingObject(problemFact);
         }
-        variableListenerSupport.resetWorkingSolution(); // TODO do not nuke it
+        variableListenerSupport.resetWorkingSolution(); // TODO do not nuke the variable listeners
     }
 
     @Override
@@ -741,7 +741,7 @@ public abstract class AbstractScoreDirector<Solution_, Factory_ extends Abstract
         } else {
             analysis.append("  The ").append(workingLabel).append(" scoreDirector has ").append(excessMap.size())
                     .append(" ConstraintMatch(s) which are in excess (and should not be there):\n");
-            excessMap.values().stream().limit(CONSTRAINT_MATCH_DISPLAY_LIMIT)
+            excessMap.values().stream().sorted().limit(CONSTRAINT_MATCH_DISPLAY_LIMIT)
                     .forEach(constraintMatch -> analysis.append("    ").append(constraintMatch).append("\n"));
             if (excessMap.size() >= CONSTRAINT_MATCH_DISPLAY_LIMIT) {
                 analysis.append("    ... ").append(excessMap.size() - CONSTRAINT_MATCH_DISPLAY_LIMIT)
@@ -753,7 +753,7 @@ public abstract class AbstractScoreDirector<Solution_, Factory_ extends Abstract
         } else {
             analysis.append("  The ").append(workingLabel).append(" scoreDirector has ").append(missingMap.size())
                     .append(" ConstraintMatch(s) which are missing:\n");
-            missingMap.values().stream().limit(CONSTRAINT_MATCH_DISPLAY_LIMIT)
+            missingMap.values().stream().sorted().limit(CONSTRAINT_MATCH_DISPLAY_LIMIT)
                     .forEach(constraintMatch -> analysis.append("    ").append(constraintMatch).append("\n"));
             if (missingMap.size() >= CONSTRAINT_MATCH_DISPLAY_LIMIT) {
                 analysis.append("    ... ").append(missingMap.size() - CONSTRAINT_MATCH_DISPLAY_LIMIT)

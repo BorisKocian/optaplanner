@@ -58,7 +58,7 @@ public abstract class SolverPerformanceTest<Solution_> extends LoggingTest {
     private final String moveThreadCount;
 
     protected SolutionFileIO<Solution_> solutionFileIO;
-    protected String solverConfig;
+    protected String solverConfigResource;
 
     @Parameterized.Parameters(name = "{index}: {0}")
     public static Collection<Object[]> getSolutionFilesAsParameters() {
@@ -81,7 +81,7 @@ public abstract class SolverPerformanceTest<Solution_> extends LoggingTest {
     public void setUp() {
         CommonApp<Solution_> commonApp = createCommonApp();
         solutionFileIO = commonApp.createSolutionFileIO();
-        solverConfig = commonApp.getSolverConfig();
+        solverConfigResource = commonApp.getSolverConfigResource();
     }
 
     protected abstract CommonApp<Solution_> createCommonApp();
@@ -96,23 +96,23 @@ public abstract class SolverPerformanceTest<Solution_> extends LoggingTest {
         logger.info("Opened: {}", unsolvedDataFile);
         Solver<Solution_> solver = solverFactory.buildSolver();
         Solution_ bestSolution = solver.solve(problem);
-        assertScoreAndConstraintMatches(solver, bestSolution, bestScoreLimitString);
+        assertScoreAndConstraintMatches(solverFactory, bestSolution, bestScoreLimitString);
     }
 
     protected SolverFactory<Solution_> buildSolverFactory(String bestScoreLimitString, EnvironmentMode environmentMode) {
-        SolverFactory<Solution_> solverFactory = SolverFactory.createFromXmlResource(solverConfig);
-        solverFactory.getSolverConfig()
-                .withEnvironmentMode(environmentMode)
+        SolverConfig solverConfig = SolverConfig.createFromXmlResource(solverConfigResource);
+        solverConfig.withEnvironmentMode(environmentMode)
                 .withTerminationConfig(new TerminationConfig()
                         .withBestScoreLimit(bestScoreLimitString))
                 .withMoveThreadCount(moveThreadCount);
-        return solverFactory;
+        return SolverFactory.create(solverConfig);
     }
 
-    private void assertScoreAndConstraintMatches(Solver<Solution_> solver, Solution_ bestSolution, String bestScoreLimitString) {
+    private void assertScoreAndConstraintMatches(SolverFactory<Solution_> solverFactory,
+            Solution_ bestSolution, String bestScoreLimitString) {
         assertNotNull(bestSolution);
         InnerScoreDirectorFactory<Solution_> scoreDirectorFactory
-                = (InnerScoreDirectorFactory<Solution_>) solver.getScoreDirectorFactory();
+                = (InnerScoreDirectorFactory<Solution_>) solverFactory.getScoreDirectorFactory();
         Score bestScore = scoreDirectorFactory.getSolutionDescriptor().getScore(bestSolution);
         ScoreDefinition scoreDefinition = scoreDirectorFactory.getScoreDefinition();
         Score bestScoreLimit = scoreDefinition.parseScore(bestScoreLimitString);
